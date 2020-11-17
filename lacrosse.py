@@ -78,7 +78,6 @@ def init_location_devices(location, auth):
             "last_timestamp_written": None,
             "location": location}        
         deviceList.append(device_dict)
-        print(device_dict)
     return deviceList
 
 def printDeviceDetails(device):
@@ -126,24 +125,24 @@ def getSensorValue(feed, sensorName):
         
 
 def processFeed(device_id, feed, aggregate):    
-    # print("in process - " + device_id)
-    # print(humidity_config)
-    # print(temperature_config)
-    # print(rain_config)
-    # print(wind_config)
     if wind_config["device_id"] == device_id:
         value = getSensorValue(feed,"WindSpeed")
         aggregate["windspeedmph"]= value['s'] * 0.621371        
+        print("--> Got wind speed ["+str(aggregate["windspeedmph"])+"]")
     if humidity_config["device_id"] == device_id:
         value = getSensorValue(feed,"Humidity")
         aggregate["humidity"]= value['s']
+        print("--> Got humidity ["+str(aggregate["humidity"])+"%]")
     if temperature_config["device_id"] == device_id:
         value = getSensorValue(feed,"Temperature")
         if "humidity" in aggregate:
             aggregate["dewptf"] = (value['s'] - ((100-aggregate["humidity"])/5))* 1.8 + 32
         aggregate["tempf"]= (value['s']* 1.8 + 32)
+        print("--> Got temp ["+str(aggregate["tempf"])+"F]")        
     if rain_config["device_id"] == device_id:
-        value = getSensorValue(feed,"Rain")
+        value = getSensorValue(feed,"Rain")        
         aggregate["dailyrainin"]= value['s']
+        print("--> Got rain ["+str(aggregate["dailyrainin"])+"]")
+
     return aggregate
         
