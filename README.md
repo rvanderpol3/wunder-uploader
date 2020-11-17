@@ -18,3 +18,7 @@ export WUNDER_KEY=your-push-key
 python3 ./weather.py
 ~~~
 
+The Lacrosse WeatherView API will be checked every 30 seconds for updates.  Additionally, only the last 60 seconds of sensor data is queried.  An aggregation of the sensor data is maintained and provided to Wunderground as a single HTTP post.  Wunderground seems to want all raw data provided at once or else you will see `--` appear on sensors.  Updates will only be sent to Wunderground if there is atleast one updated sensor in a given poll of the WeatherView API.
+
+Some sensors such as barometric pressure are not accessible via the API(atleast not that I could find).  
+
