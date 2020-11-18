@@ -187,7 +187,7 @@ def processRain(feed, aggregate):
         statep["last_rainfall_timestamp"] = value['u']
         statep["rainfall"] = statep["rainfall"] + value['s']                    
         aggregate["dailyrainin"] = statep["rainfall"]
-        print("--> Got rain ["+str(aggregate["dailyrainin"])+"]")
+        print("--> Got rain current["+str(value['s'])+"] aggregate["+str(aggregate["dailyrainin"])+"]")
 
 def writeStateFile():
     with open("state.cfg","wt") as cfg:
