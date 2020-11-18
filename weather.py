@@ -1,3 +1,4 @@
+import argparse
 import requests
 import os
 import time
@@ -23,6 +24,10 @@ for location in locations["items"]:
 
 aggregate = {}
 
+parser = argparse.ArgumentParser(description='Uploads data to the Weather Underground from the WeatherView API')
+parser.add_argument('-d','--dryrun', help='Downloads from WeatherView but does not upload to Wunderground', action="store_true")
+parser.add_argument('-p','--poll_period', type=int, default=30, help='Period in seconds between polls of the WeatherView API')
+args = parser.parse_args()
 
 while True:
     print("Getting auth token")
@@ -46,12 +51,12 @@ while True:
                 print("Unable to get or process feed for device.")
                 print(_device)
                 pass           
-    if dataUpdated:        
+    if dataUpdated and args.dryrun == False:        
         try:
             print("Uploading data to wunderground")
             wunder.uploadDataSet(aggregate)
         except Exception:
             print("Error in uploading data.")
             pass
-    time.sleep(30)
+    time.sleep(args.poll_period)
 

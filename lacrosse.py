@@ -4,10 +4,17 @@ import time
 import utils
 import sys
 import configparser
+import ast
+import os.path
+from os import path
 from datetime import datetime
 
 LACROSSE_EMAIL=os.environ.get("LACROSSE_EMAIL")
 LACROSSE_PW=os.environ.get("LACROSSE_PW")
+
+if LACROSSE_EMAIL == "" or LACROSSE_PW == "":
+    print("The environment variables `LACROSSE_EMAIL` and `LACROSSE_PW` must be exported.")
+    sys.exit(1)
 
 SENSOR_CONFIG={}
 
@@ -29,7 +36,23 @@ sensor_map=configp["sensor_map"]
 wind_config = splitDef(sensor_map,"wind")
 temperature_config = splitDef(sensor_map,"temperature")
 rain_config = splitDef(sensor_map,"rain")
+rain_config['last_timestamp'] = 0
 humidity_config = splitDef(sensor_map,"humidity")
+
+lastUpdateTime = 0
+
+statep = {
+    "date": -1,
+    "rainfall": 0.00
+}
+
+if path.exists("state.cfg"):
+    with open("state.cfg") as cfg:
+        data = cfg.read()
+        statep = ast.literal_eval(data)
+        print("Restored state: " + str(statep))
+
+
 
 def getLacrosseToken():
     url='https://www.googleapis.com/identitytoolkit/v3/relyingparty/verifyPassword?key=AIzaSyD-Uo0hkRIeDYJhyyIg-TvAv8HhExARIO4'
@@ -124,25 +147,64 @@ def getSensorValue(feed, sensorName):
     return None
         
 
-def processFeed(device_id, feed, aggregate):    
-    if wind_config["device_id"] == device_id:
-        value = getSensorValue(feed,"WindSpeed")
-        aggregate["windspeedmph"]= value['s'] * 0.621371        
-        print("--> Got wind speed ["+str(aggregate["windspeedmph"])+"]")
-    if humidity_config["device_id"] == device_id:
-        value = getSensorValue(feed,"Humidity")
-        aggregate["humidity"]= value['s']
-        print("--> Got humidity ["+str(aggregate["humidity"])+"%]")
-    if temperature_config["device_id"] == device_id:
-        value = getSensorValue(feed,"Temperature")
+def checkDailyRollover():
+    today = datetime.today()   
+    print(today)
+    if statep["date"] != today.day:
+        print("New day rollover - " + str(today))
+        statep["date"] = today.day
+        statep["rainfall"] = 0.00
+
+
+def processWind(feed, aggregate):
+    value = getSensorValue(feed,"WindSpeed")
+    aggregate["windspeedmph"]= value['s'] * 0.621371        
+    print("--> Got wind speed ["+str(aggregate["windspeedmph"])+"]")
+
+def processHumidity(feed, aggregate):
+    value = getSensorValue(feed,"Humidity")
+    aggregate["humidity"]= value['s']
+    print("--> Got humidity ["+str(aggregate["humidity"])+"%]")
+
+def processTemperature(feed, aggregate):
+    value = getSensorValue(feed,"Temperature")
+    tempC = value['s']
+    lastTemp = temperature_config["last_temp_c"]
+    # occassionally the temperature sensor flakes out and this is an attempt to filter that flake
+    if lastTemp == None or abs(lastTemp-tempC) < 20:
         if "humidity" in aggregate:
             aggregate["dewptf"] = (value['s'] - ((100-aggregate["humidity"])/5))* 1.8 + 32
-        aggregate["tempf"]= (value['s']* 1.8 + 32)
+        aggregate["tempf"]= (value['s']* 1.8 + 32)            
         print("--> Got temp ["+str(aggregate["tempf"])+"F]")        
-    if rain_config["device_id"] == device_id:
-        value = getSensorValue(feed,"Rain")        
-        aggregate["dailyrainin"]= value['s']
+        temperature_config["last_temp_c"] = tempC
+
+def processRain(feed, aggregate):
+    value = getSensorValue(feed,"Rain")        
+    if statep["last_rainfall_timestamp"] != value['p']:
+        statep["last_rainfall_timestamp"] = value['p']
+        statep["rainfall"] = statep["rainfall"] + value['s']                    
+        aggregate["dailyrainin"] = statep["rainfall"]
         print("--> Got rain ["+str(aggregate["dailyrainin"])+"]")
 
+def writeStateFile():
+    with open("state.cfg","wt") as cfg:
+        cfg.write(str(statep))
+
+def processFeed(device_id, feed, aggregate):    
+    checkDailyRollover()
+
+    if wind_config["device_id"] == device_id:
+        processWind(feed,aggregate)
+
+    if humidity_config["device_id"] == device_id:
+        processHumidity(feed,aggregate)
+
+    if temperature_config["device_id"] == device_id:
+        processTemperature(feed,aggregate)
+
+    if rain_config["device_id"] == device_id:
+        processRain(feed,aggregate)
+
+    writeStateFile()
     return aggregate
         

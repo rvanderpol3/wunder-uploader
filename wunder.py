@@ -1,5 +1,6 @@
 import requests
 import os
+import sys
 import time
 import utils
 from datetime import datetime
@@ -7,6 +8,9 @@ from datetime import datetime
 WUNDER_ID=os.environ.get("WUNDER_ID")
 WUNDER_KEY=os.environ.get("WUNDER_KEY")
 
+if WUNDER_ID == "" or WUNDER_KEY == "":
+    print("The evnironment variables `WUNDER_ID` and `WUNDER_KEY` must be exported.")
+    sys.exit(1)
 
 def uploadDataSet(data):
     if data == {}:
