@@ -156,6 +156,7 @@ def checkDailyRollover():
         print("New day rollover - " + str(today))
         statep["date"] = today.day
         statep["rainfall"] = 0.00
+        aggregate["dailyrainin"] = 0.00 
 
 
 def processWind(feed, aggregate):
