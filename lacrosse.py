@@ -149,7 +149,7 @@ def getSensorValue(feed, sensorName):
     return None
         
 
-def checkDailyRollover():
+def checkDailyRollover(aggregate):
     today = datetime.today()   
     print(today)
     if statep["date"] != today.day:
@@ -194,7 +194,7 @@ def writeStateFile():
         cfg.write(str(statep))
 
 def processFeed(device_id, feed, aggregate):    
-    checkDailyRollover()
+    checkDailyRollover(aggregate)
 
     if wind_config["device_id"] == device_id:
         processWind(feed,aggregate)
