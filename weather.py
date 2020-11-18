@@ -50,6 +50,8 @@ while True:
             except Exception:
                 print("Unable to get or process feed for device.")
                 print(_device)
+                if args.dryrun:
+                    Exception.with_traceback()
                 pass           
     if dataUpdated and args.dryrun == False:        
         try:
@@ -58,5 +60,7 @@ while True:
         except Exception:
             print("Error in uploading data.")
             pass
+    else:
+        print("Would have sent this to Wunderground: " + str(aggregate))
     time.sleep(args.poll_period)
 

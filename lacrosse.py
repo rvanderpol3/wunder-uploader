@@ -35,6 +35,7 @@ sensor_map=configp["sensor_map"]
 
 wind_config = splitDef(sensor_map,"wind")
 temperature_config = splitDef(sensor_map,"temperature")
+temperature_config["last_temp_c"] = None
 rain_config = splitDef(sensor_map,"rain")
 rain_config['last_timestamp'] = 0
 humidity_config = splitDef(sensor_map,"humidity")
@@ -43,7 +44,8 @@ lastUpdateTime = 0
 
 statep = {
     "date": -1,
-    "rainfall": 0.00
+    "rainfall": 0.00,
+    "last_rainfall_timestamp": 0
 }
 
 if path.exists("state.cfg"):
@@ -180,8 +182,8 @@ def processTemperature(feed, aggregate):
 
 def processRain(feed, aggregate):
     value = getSensorValue(feed,"Rain")        
-    if statep["last_rainfall_timestamp"] != value['p']:
-        statep["last_rainfall_timestamp"] = value['p']
+    if statep["last_rainfall_timestamp"] != value['u']:
+        statep["last_rainfall_timestamp"] = value['u']
         statep["rainfall"] = statep["rainfall"] + value['s']                    
         aggregate["dailyrainin"] = statep["rainfall"]
         print("--> Got rain ["+str(aggregate["dailyrainin"])+"]")
