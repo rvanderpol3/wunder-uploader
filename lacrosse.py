@@ -34,10 +34,14 @@ if 'sensor_map' not in configp:
 sensor_map=configp["sensor_map"]
 
 wind_config = splitDef(sensor_map,"wind")
+wind_config["history"] = []
+wind_config["last_timestamp"] = 0
+
 temperature_config = splitDef(sensor_map,"temperature")
 temperature_config["last_temp_c"] = None
 rain_config = splitDef(sensor_map,"rain")
-rain_config['last_timestamp'] = 0
+rain_config["last_timestamp"] = 0
+rain_config["history"] = []
 humidity_config = splitDef(sensor_map,"humidity")
 
 lastUpdateTime = 0
@@ -158,10 +162,39 @@ def checkDailyRollover(aggregate):
         statep["rainfall"] = 0.00
         aggregate["dailyrainin"] = 0.00 
 
+def getWindStats(aggregate, value):
+    currentSpeed = aggregate["windspeedmph"]
+    currentTime = value['u']
+    if currentTime == wind_config["last_timestamp"]:
+        return
+    wind_config["last_timestamp"] = currentTime
+    gust10minTimeout = currentTime - 600
+    avg2minTimeout = currentTime - 120
+    wind_config["history"].insert(0,{"speed":currentSpeed, "time":currentTime}) 
+    hasAverage = False
+    speedAccum=0
+    maxSpeed = 0
+    for index in range(len(wind_config["history"])):
+        val = wind_config["history"][index]        
+        if hasAverage == False:
+            if val["time"] > avg2minTimeout:
+                speedAccum = speedAccum + val["speed"]
+            else:
+                aggregate["windspdmph_avg2m"] = speedAccum / (index+1)
+                hasAverage = True
+        if val["time"] > gust10minTimeout:
+            if val["speed"] > maxSpeed:
+                maxSpeed = val["speed"]
+        else:
+            wind_config["history"] = wind_config["history"][0:index]
+            break
+    aggregate["windgustmph_10m"] = maxSpeed
+    print("wind history len["+str(len(wind_config["history"]))+"]- ["+str(wind_config["history"])+"]")
 
 def processWind(feed, aggregate):
     value = getSensorValue(feed,"WindSpeed")
     aggregate["windspeedmph"]= value['s'] * 0.621371        
+    getWindStats(aggregate, value)    
     print("--> Got wind speed ["+str(aggregate["windspeedmph"])+"]")
 
 def processHumidity(feed, aggregate):
@@ -186,8 +219,23 @@ def processRain(feed, aggregate):
     if statep["last_rainfall_timestamp"] != value['u']:
         statep["last_rainfall_timestamp"] = value['u']
         statep["rainfall"] = statep["rainfall"] + value['s']                    
-        aggregate["dailyrainin"] = statep["rainfall"]
+        aggregate["dailyrainin"] = statep["rainfall"]        
+        rain_config["history"].insert(0, value)
         print("--> Got rain current["+str(value['s'])+"] aggregate["+str(aggregate["dailyrainin"])+"]")
+
+    if len(rain_config["history"]) > 0:
+        currentTime = rain_config["history"][0]['u']
+        accum60minTimeout = currentTime - 3600
+        rainInLastHour=0
+        for index in range(len(rain_config["history"])):
+            val = rain_config["history"][index]   
+            if val['u'] > accum60minTimeout:
+                rainInLastHour = rainInLastHour + value['s']
+            else:
+                rain_config["history"] = rain_config["history"][0:index]
+                break
+        aggregate["rainin"] = rainInLastHour
+    print("rain history len["+str(len(rain_config["history"]))+"] - ["+str(rain_config["history"])+"]")
 
 def writeStateFile():
     with open("state.cfg","wt") as cfg:
