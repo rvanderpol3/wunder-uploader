@@ -6,6 +6,7 @@ import sys
 import configparser
 import ast
 import os.path
+from meteocalc import Temp, dew_point
 from os import path
 from datetime import datetime
 
@@ -205,11 +206,13 @@ def processHumidity(feed, aggregate):
 def processTemperature(feed, aggregate):
     value = getSensorValue(feed,"Temperature")
     tempC = value['s']
+    tempVal = Temp(tempC, 'c')
+    
     lastTemp = temperature_config["last_temp_c"]
     # occassionally the temperature sensor flakes out and this is an attempt to filter that flake
-    if lastTemp == None or abs(lastTemp-tempC) < 20:
-        if "humidity" in aggregate:
-            aggregate["dewptf"] = (value['s'] - ((100-aggregate["humidity"])/5))* 1.8 + 32
+    if lastTemp == None or abs(lastTemp-tempC) < 20:        
+        if "humidity" in aggregate:            
+            aggregate["dewptf"] = (dew_point(temperature=tempVal,humidity=aggregate["humidity"] ) * 1.8) + 32
         aggregate["tempf"]= (value['s']* 1.8 + 32)            
         print("--> Got temp ["+str(aggregate["tempf"])+"F]")        
         temperature_config["last_temp_c"] = tempC

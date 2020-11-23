@@ -1,6 +1,9 @@
+#! /usr/bin/env python
+
 import argparse
 import requests
 import os
+import pisensors
 import time
 import lacrosse
 import wunder
@@ -26,6 +29,7 @@ aggregate = {}
 
 parser = argparse.ArgumentParser(description='Uploads data to the Weather Underground from the WeatherView API')
 parser.add_argument('-d','--dryrun', help='Downloads from WeatherView but does not upload to Wunderground', action="store_true")
+parser.add_argument('-s','--pi-sensors', help='Downloads from WeatherView but does not upload to Wunderground', action="store_true")
 parser.add_argument('-p','--poll_period', type=int, default=30, help='Period in seconds between polls of the WeatherView API')
 args = parser.parse_args()
 
@@ -36,6 +40,10 @@ while True:
     if token != None:
         idToken = token["idToken"]
     dataUpdated = False
+
+    if args.pi_sensors:
+        pisensors.aggregatePiSensors(aggregate)
+
     for device in devices:            
         for _device in device:
             print("Processing device " + _device["device_name"])        
