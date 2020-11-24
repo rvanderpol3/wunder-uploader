@@ -41,7 +41,7 @@ To enable reading of barometric pressure a `BMP180` was soldered to a Raspberry 
 {'baromin': 30.37816094557164}
 ~~~
 
-While the returned value is for barometric pressure, and of the Wunderground HTTP paramters could also be returned.  This project will automatically consume and add any variables it finds to the payload to be sent to Wunderground.
+While the returned value is for barometric pressure, any of the Wunderground HTTP paramters could also be returned.  This project will automatically consume and add any variables it finds to the payload to be sent to Wunderground.
 
 To enable this feature:
 
