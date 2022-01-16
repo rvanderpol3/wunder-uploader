@@ -12,6 +12,13 @@ from datetime import datetime
 
 LACROSSE_EMAIL=os.environ.get("LACROSSE_EMAIL")
 LACROSSE_PW=os.environ.get("LACROSSE_PW")
+# https://cumuluswiki.org/a/Wind_measurement
+WIND_SPEED_MULTIPLIER_FOR_HEIGHT=os.environ.get("WIND_SPEED_MULTIPLIER_FOR_HEIGHT")
+if WIND_SPEED_MULTIPLIER_FOR_HEIGHT == "":
+    WIND_SPEED_MULTIPLIER_FOR_HEIGHT = 1
+else:
+    WIND_SPEED_MULTIPLIER_FOR_HEIGHT = float(WIND_SPEED_MULTIPLIER_FOR_HEIGHT)
+    print("Applying wind speed adjustment multiplier")
 
 if LACROSSE_EMAIL == "" or LACROSSE_PW == "":
     print("The environment variables `LACROSSE_EMAIL` and `LACROSSE_PW` must be exported.")
@@ -190,11 +197,14 @@ def getWindStats(aggregate, value):
             wind_config["history"] = wind_config["history"][0:index]
             break
     aggregate["windgustmph_10m"] = maxSpeed
+    aggregate["windgustmph"] = maxSpeed
     print("wind history len["+str(len(wind_config["history"]))+"]- ["+str(wind_config["history"])+"]")
 
-def processWind(feed, aggregate):
+def processWind(feed, aggregate):    
     value = getSensorValue(feed,"WindSpeed")
-    aggregate["windspeedmph"]= value['s'] * 0.621371        
+    speed = value['s'] * 0.621371
+    aggregate["windspeedmph_unadjusted"] = speed
+    aggregate["windspeedmph"] = speed * WIND_SPEED_MULTIPLIER_FOR_HEIGHT
     getWindStats(aggregate, value)    
     print("--> Got wind speed ["+str(aggregate["windspeedmph"])+"]")
 
@@ -228,16 +238,18 @@ def processRain(feed, aggregate):
 
     if len(rain_config["history"]) > 0:
         currentTime = rain_config["history"][0]['u']
-        accum60minTimeout = currentTime - 3600
+        # accum60minTimeout = currentTime - 3600
+        # calc based on 5 minute rolling window
+        accum60minTimeout = currentTime - 300
         rainInLastHour=0
         for index in range(len(rain_config["history"])):
             val = rain_config["history"][index]   
             if val['u'] > accum60minTimeout:
-                rainInLastHour = rainInLastHour + value['s']
+                rainInLastHour = rainInLastHour + val['s']
             else:
                 rain_config["history"] = rain_config["history"][0:index]
                 break
-        aggregate["rainin"] = rainInLastHour
+        aggregate["rainin"] = (rainInLastHour * 12)
     print("rain history len["+str(len(rain_config["history"]))+"] - ["+str(rain_config["history"])+"]")
 
 def writeStateFile():
@@ -262,3 +274,4 @@ def processFeed(device_id, feed, aggregate):
     writeStateFile()
     return aggregate
         
+
